@@ -1,4 +1,4 @@
-const APP_VERSION = '1.0.19';
+const APP_VERSION = '1.0.21';
 const WHEEL_ITEM = 44;
 const MAX_PHOTOS = 8;
 const STORAGE_KEY = 'hoofNotesData';
@@ -449,6 +449,7 @@ class HoofNotes {
         this.renderAnimalPhoto(animal);
         document.getElementById('profileBody').innerHTML = `
             <div class="facts">
+                ${this.fact('Sex', animal.sex)}
                 ${this.fact('Breed', animal.breed)}
                 ${this.fact('Color', animal.color)}
                 ${this.fact('ID number', animal.idNumber)}
@@ -659,7 +660,30 @@ class HoofNotes {
                 <text class="chart-date" x="${first.x.toFixed(1)}" y="${height - 8}" text-anchor="${points.length === 1 ? 'middle' : 'start'}">${this.escape(this.chartDate(points[0].date))}</text>
                 ${points.length > 1 ? `<text class="chart-date" x="${last.x.toFixed(1)}" y="${height - 8}" text-anchor="end">${this.escape(this.chartDate(points[points.length - 1].date))}</text>` : ''}
             </svg>
+            ${this.weightRate(points)}
         `;
+    }
+
+    weightRate(points) {
+        if (points.length < 2) return '';
+        const first = points[0];
+        const last = points[points.length - 1];
+        const start = Date.UTC(first.time.getFullYear(), first.time.getMonth(), first.time.getDate());
+        const end = Date.UTC(last.time.getFullYear(), last.time.getMonth(), last.time.getDate());
+        const days = Math.round((end - start) / 86400000);
+        if (days < 1) return '';
+        const perDay = (last.weight - first.weight) / days;
+        const amount = this.rateAmount(perDay);
+        const text = perDay > 0 ? `${amount} lb gained per day` : perDay < 0 ? `${amount} lb lost per day` : '0 lb per day';
+        return `<p class="weight-rate">${text}</p>`;
+    }
+
+    rateAmount(value) {
+        const abs = Math.abs(value);
+        const digits = abs >= 10 ? 1 : 2;
+        const factor = 10 ** digits;
+        const rounded = Math.round(abs * factor) / factor;
+        return String(rounded);
     }
 
     treatmentList(animal, limit) {
@@ -954,6 +978,7 @@ class HoofNotes {
         document.getElementById('animalModalTitle').textContent = editing ? 'Edit animal' : 'Add animal';
         document.getElementById('animalType').value = animal ? animal.type : TYPES[0];
         document.getElementById('animalName').value = animal ? animal.name : '';
+        document.getElementById('animalSex').value = animal && (animal.sex === 'Male' || animal.sex === 'Female') ? animal.sex : '';
         document.getElementById('animalBreed').value = animal ? animal.breed || '' : '';
         document.getElementById('animalColor').value = animal ? animal.color || '' : '';
         document.getElementById('animalTag').value = animal ? animal.idNumber || '' : '';
@@ -980,6 +1005,7 @@ class HoofNotes {
         const fields = {
             type,
             name,
+            sex: document.getElementById('animalSex').value,
             breed: document.getElementById('animalBreed').value.trim(),
             color: document.getElementById('animalColor').value.trim(),
             idNumber: document.getElementById('animalTag').value.trim(),

@@ -2,7 +2,7 @@
   "name": "HoofNotes",
   "short_name": "HoofNotes",
   "description": "Track farm animals, health checks, weights, vaccinations, and breeding",
-  "version": "1.0.19",
+  "version": "1.0.21",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#F4F7FB",
