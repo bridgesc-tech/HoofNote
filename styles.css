@@ -223,6 +223,8 @@ select, .field, .search { min-height: 48px; }
 .section-breeding .section-mark, .section-breeding .section-add { background: #4C3D73; }
 .section-expense { background: #F3F6F1; border-color: #D3DCCB; }
 .section-expense .section-mark, .section-expense .section-add { background: #3D4F3A; }
+.section-offspring { background: #F8EEF2; border-color: #E5CDD6; }
+.section-offspring .section-mark, .section-offspring .section-add { background: #7A3454; }
 .expense-total { margin: 0 0 10px; color: var(--navy); font-size: 14px; font-weight: 750; }
 .archive-btn { width: 100%; margin-top: 18px; }
 .archive-note { margin-top: 8px; }
@@ -366,6 +368,20 @@ select, .field, .search { min-height: 48px; }
 .fact { background: var(--card); border-radius: 14px; padding: 12px; box-shadow: var(--shadow); }
 .fact span { display: block; color: var(--muted); font-size: 12px; }
 .fact strong { color: var(--navy); font-size: 15px; }
+.fact-wide { grid-column: 1 / -1; min-width: 0; }
+.fact-wide strong { display: block; font-weight: 650; line-height: 1.45; overflow-wrap: anywhere; }
+.parent-link {
+    border: none;
+    background: transparent;
+    padding: 0;
+    color: var(--navy);
+    font: inherit;
+    font-weight: 750;
+    text-decoration: underline;
+    cursor: pointer;
+}
+.parent-sep { color: var(--muted); font-weight: 650; }
+.modal-lead { margin: -4px 0 12px; }
 
 .modal-card {
     background: var(--card);

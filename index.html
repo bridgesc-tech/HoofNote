@@ -11,7 +11,7 @@
     <link rel="icon" href="icon.svg">
     <link rel="apple-touch-icon" href="icon-192.png">
     <link rel="manifest" href="manifest.json">
-    <link rel="stylesheet" href="styles.css?v=1.0.21">
+    <link rel="stylesheet" href="styles.css?v=1.0.22">
 </head>
 <body>
     <div id="updateBanner" class="update-modal hidden">
@@ -158,6 +158,16 @@
                     </div>
                 </div>
                 <input type="hidden" id="animalDob">
+            </div>
+            <div id="birthFields" class="hidden">
+                <div class="form-group">
+                    <label for="animalBirthWeight">Birth weight (lb)</label>
+                    <input id="animalBirthWeight" type="number" min="0" step="0.1" inputmode="decimal" placeholder="85">
+                </div>
+                <div class="form-group">
+                    <label for="animalBirthNotes">Birth notes</label>
+                    <textarea id="animalBirthNotes" rows="3" maxlength="800" placeholder="Birth ease, markings, anything to remember"></textarea>
+                </div>
             </div>
             <div class="form-actions">
                 <button type="button" class="btn btn-secondary" id="cancelAnimalBtn">Cancel</button>
@@ -381,11 +391,74 @@
         </div>
     </div>
 
+    <div id="offspringModal" class="modal hidden">
+        <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="offspringModalTitle">
+            <h2 id="offspringModalTitle">Offspring</h2>
+            <p class="help modal-lead">This birth is saved on this animal, and the offspring is added as its own animal. Choose the other parent to list the offspring on that profile too.</p>
+            <div class="form-group">
+                <label for="offspringName">Name</label>
+                <input id="offspringName" type="text" maxlength="60" placeholder="Clover">
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="offspringSex">Sex</label>
+                    <select id="offspringSex">
+                        <option value="">Choose</option>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="offspringType">Type</label>
+                    <select id="offspringType"></select>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="offspringDob">Date of birth</label>
+                <input id="offspringDob" type="date">
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="offspringBreed">Breed</label>
+                    <input id="offspringBreed" type="text" maxlength="60" placeholder="Holstein">
+                </div>
+                <div class="form-group">
+                    <label for="offspringColor">Color</label>
+                    <input id="offspringColor" type="text" maxlength="40" placeholder="Black and white">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="offspringTag">ID number</label>
+                    <input id="offspringTag" type="text" maxlength="40" placeholder="840 123 456">
+                </div>
+                <div class="form-group">
+                    <label for="offspringWeight">Birth weight (lb)</label>
+                    <input id="offspringWeight" type="number" min="0" step="0.1" inputmode="decimal" placeholder="85">
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="offspringOtherParent">Other parent</label>
+                <select id="offspringOtherParent">
+                    <option value="">None</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="offspringNotes">Notes</label>
+                <textarea id="offspringNotes" rows="3" maxlength="800" placeholder="Birth ease, markings, anything to remember"></textarea>
+            </div>
+            <div class="form-actions">
+                <button type="button" class="btn btn-secondary" id="cancelOffspringBtn">Cancel</button>
+                <button type="button" class="btn btn-primary" id="saveOffspringBtn">Save</button>
+            </div>
+        </div>
+    </div>
+
     <div id="photoViewer" class="photo-viewer hidden">
         <button type="button" class="photo-viewer-close" id="closePhotoBtn">Close</button>
         <img id="photoViewerImg" alt="Attached photo">
     </div>
 
-    <script src="script.js?v=1.0.21"></script>
+    <script src="script.js?v=1.0.22"></script>
 </body>
 </html>

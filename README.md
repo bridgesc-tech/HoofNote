@@ -14,6 +14,7 @@ On the profile:
 - Weight checks store a date, weight, and notes.
 - Vaccinations and deworming store the product, amount, route, who gave it, notes, and the next due date. Add a reminder email and use Email reminder to open a message for that due date.
 - Breeding stores Natural Cover or AI, the breeder, and the animal bred with.
+- Offspring stores a birth. Saving adds that young animal to the herd, and tapping it opens that animal. Choose the other parent to list the same offspring on that profile too.
 
 ## Install
 

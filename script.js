@@ -1,4 +1,4 @@
-const APP_VERSION = '1.0.21';
+const APP_VERSION = '1.0.22';
 const WHEEL_ITEM = 44;
 const MAX_PHOTOS = 8;
 const STORAGE_KEY = 'hoofNotesData';
@@ -29,6 +29,7 @@ class HoofNotes {
         this.photoBusy = false;
         this.photosById = {};
         this.historyKind = null;
+        this.profileBack = [];
         this.load();
         this.fillTypes();
         this.bind();
@@ -136,15 +137,16 @@ class HoofNotes {
     }
 
     fillTypes() {
-        const select = document.getElementById('animalType');
-        select.innerHTML = TYPES.map((type) => `<option value="${type}">${type}</option>`).join('');
+        const html = TYPES.map((type) => `<option value="${type}">${type}</option>`).join('');
+        document.getElementById('animalType').innerHTML = html;
+        document.getElementById('offspringType').innerHTML = html;
     }
 
     bind() {
         document.querySelectorAll('.nav-item').forEach((button) => {
             button.addEventListener('click', () => this.showTab(button.dataset.tab));
         });
-        document.getElementById('closeProfileBtn').addEventListener('click', () => this.closeProfile());
+        document.getElementById('closeProfileBtn').addEventListener('click', () => this.backProfile());
         document.getElementById('closeHistoryBtn').addEventListener('click', () => this.closeHistory());
         document.getElementById('editAnimalBtn').addEventListener('click', () => this.openAnimal());
         document.getElementById('animalPhotoInput').addEventListener('change', (event) => {
@@ -172,6 +174,8 @@ class HoofNotes {
         document.getElementById('cancelExpenseBtn').addEventListener('click', () => this.closeModal('expenseModal'));
         document.getElementById('saveExpenseBtn').addEventListener('click', () => this.saveExpense());
         document.getElementById('deleteExpenseBtn').addEventListener('click', () => this.deleteRecord('expenses', 'expenseModal'));
+        document.getElementById('cancelOffspringBtn').addEventListener('click', () => this.closeModal('offspringModal'));
+        document.getElementById('saveOffspringBtn').addEventListener('click', () => this.saveOffspring());
         ['monthWheel', 'dayWheel', 'yearWheel'].forEach((id) => {
             const wheel = document.getElementById(id);
             wheel.addEventListener('scroll', () => this.onWheelScroll(id));
@@ -388,17 +392,44 @@ class HoofNotes {
     }
 
     openProfile(id) {
+        this.profileBack = [];
         this.animalId = id;
-        const labels = { animals: 'Animals', due: 'Due', more: 'More' };
-        document.getElementById('closeProfileBtn').textContent = `‹ ${labels[this.tab] || 'Animals'}`;
         document.getElementById('profile').classList.remove('hidden');
         this.renderProfile();
     }
 
     closeProfile() {
         this.closeHistory();
+        this.profileBack = [];
         this.animalId = null;
         document.getElementById('profile').classList.add('hidden');
+    }
+
+    backProfile() {
+        this.closeHistory();
+        const previousId = this.profileBack.pop();
+        const previous = previousId && this.animal(previousId);
+        if (!previous) {
+            this.profileBack = [];
+            this.closeProfile();
+            return;
+        }
+        this.animalId = previous.id;
+        this.render();
+        const body = document.getElementById('profileBody');
+        if (body) body.scrollTop = 0;
+    }
+
+    openLinkedAnimal(id) {
+        const next = this.animal(id);
+        if (!next || next.id === this.animalId) return;
+        if (this.animalId) this.profileBack.push(this.animalId);
+        this.closeHistory();
+        this.animalId = next.id;
+        document.getElementById('profile').classList.remove('hidden');
+        this.render();
+        const body = document.getElementById('profileBody');
+        if (body) body.scrollTop = 0;
     }
 
     closeHistory() {
@@ -421,6 +452,7 @@ class HoofNotes {
             weight: 'Weight checks',
             treatment: 'Vaccinations and deworming',
             breeding: 'Breeding',
+            offspring: 'Offspring',
             expense: 'Expenses'
         };
         const lists = {
@@ -428,6 +460,7 @@ class HoofNotes {
             weight: () => this.weightList(animal),
             treatment: () => this.treatmentList(animal),
             breeding: () => this.breedingList(animal),
+            offspring: () => this.offspringList(animal),
             expense: () => this.expenseList(animal)
         };
         document.getElementById('closeHistoryBtn').textContent = `‹ ${animal.name}`;
@@ -441,6 +474,12 @@ class HoofNotes {
         const animal = this.animal();
         if (!animal) return;
         this.photosById = {};
+        const labels = { animals: 'Animals', due: 'Due', more: 'More' };
+        const previousId = this.profileBack[this.profileBack.length - 1];
+        const previous = previousId ? this.animal(previousId) : null;
+        document.getElementById('closeProfileBtn').textContent = previous
+            ? `‹ ${previous.name}`
+            : `‹ ${labels[this.tab] || 'Animals'}`;
         document.getElementById('profileType').textContent = animal.type;
         document.getElementById('profileName').textContent = animal.name;
         document.getElementById('profileStatus').classList.toggle('hidden', !animal.archived);
@@ -454,11 +493,15 @@ class HoofNotes {
                 ${this.fact('Color', animal.color)}
                 ${this.fact('ID number', animal.idNumber)}
                 ${this.fact('Date of birth', animal.dob ? this.formatDate(animal.dob) : '')}
+                ${animal.birthWeight ? this.fact('Birth weight', `${animal.birthWeight} lb`) : ''}
+                ${animal.birthNotes ? this.wideFact('Birth notes', animal.birthNotes) : ''}
+                ${this.parentFacts(animal)}
             </div>
             ${this.section('Health checks', 'health', this.healthList(animal, 3))}
             ${this.section('Weight checks', 'weight', this.weightList(animal, 3))}
             ${this.section('Vaccinations and deworming', 'treatment', this.treatmentList(animal, 3))}
             ${this.section('Breeding', 'breeding', this.breedingList(animal, 3))}
+            ${this.section('Offspring', 'offspring', this.offspringList(animal, 3), 'Record a birth. The offspring is added as its own animal.')}
             ${this.section('Expenses', 'expense', this.expenseList(animal, 3))}
             <button type="button" class="btn btn-secondary archive-btn" id="archiveAnimalBtn">${animal.archived ? 'Return to active' : 'Archive animal'}</button>
             <p class="help archive-note">${animal.archived ? 'This animal is archived. The records stay on this phone.' : 'Archive an animal that has left the farm. The records stay on this phone, under Archived on the Animals page.'}</p>
@@ -527,18 +570,23 @@ class HoofNotes {
         return `<div class="fact"><span>${label}</span><strong>${this.escape(value || '—')}</strong></div>`;
     }
 
-    section(title, kind, result) {
+    wideFact(label, value) {
+        return `<div class="fact fact-wide"><span>${label}</span><strong>${this.escape(value || '—')}</strong></div>`;
+    }
+
+    section(title, kind, result, emptyText) {
         const more = result.total > 3
             ? `<button type="button" class="btn btn-secondary history-more" data-history="${kind}">More</button>`
             : '';
         const body = result.html
             ? `${result.html}${more}`
-            : '<div class="empty"><strong>None yet</strong>Add the first record for this animal.</div>';
+            : `<div class="empty"><strong>None yet</strong>${this.escape(emptyText || 'Add the first record for this animal.')}</div>`;
         const marks = {
             health: '<svg viewBox="0 0 24 24"><rect x="6" y="3.5" width="12" height="17" rx="2"/><path d="M9 3.5h6v3H9zM8.5 13.5l2.2 2.2 4.8-5"/></svg>',
             weight: '<svg viewBox="0 0 24 24"><path d="M4 16.5 9.2 11l3.8 3.4L20 7"/><path d="M14.5 7H20v5.5"/></svg>',
             treatment: '<svg viewBox="0 0 24 24"><path d="M12 3.2s6.2 6.4 6.2 10.4a6.2 6.2 0 0 1-12.4 0C5.8 9.6 12 3.2 12 3.2z"/></svg>',
             breeding: '<svg viewBox="0 0 24 24"><circle cx="8.5" cy="9" r="2.7"/><circle cx="15.5" cy="9" r="2.7"/><path d="M5.2 18.8c.6-2.3 2.1-3.6 4-3.6h5.6c1.9 0 3.4 1.3 4 3.6"/></svg>',
+            offspring: '<svg viewBox="0 0 24 24"><circle cx="8" cy="9" r="2.5"/><circle cx="15.6" cy="11.2" r="1.7"/><path d="M4.6 18.8c.5-2.3 2-3.6 3.8-3.6 1.2 0 2.2.5 2.8 1.3"/><path d="M13.4 18.8c.3-1.4 1.2-2.3 2.4-2.3 1 0 1.8.5 2.2 1.3"/></svg>',
             expense: '<svg viewBox="0 0 24 24"><path d="M7 3.5h10v17l-2-1.3-2 1.3-2-1.3-2 1.3-2-1.3V3.5z"/><path d="M9.5 8h5M9.5 12h5"/></svg>'
         };
         return `
@@ -558,6 +606,9 @@ class HoofNotes {
         });
         root.querySelectorAll('[data-edit]').forEach((button) => {
             button.addEventListener('click', () => this.openRecord(button.dataset.edit, button.dataset.id));
+        });
+        root.querySelectorAll('[data-open-animal]').forEach((button) => {
+            button.addEventListener('click', () => this.openLinkedAnimal(button.dataset.openAnimal));
         });
     }
 
@@ -729,6 +780,52 @@ class HoofNotes {
             </div>
         `).join('');
         return { html, total: items.length };
+    }
+
+    offspringOf(animal) {
+        return this.data.animals
+            .filter((child) => child.id !== animal.id && (child.parentIds || []).includes(animal.id))
+            .sort((a, b) => {
+                const byDate = (b.dob || '').localeCompare(a.dob || '');
+                if (byDate) return byDate;
+                return a.name.localeCompare(b.name);
+            });
+    }
+
+    offspringList(animal, limit) {
+        const items = this.offspringOf(animal);
+        const shown = typeof limit === 'number' ? items.slice(0, limit) : items;
+        const html = shown.map((child) => {
+            const bits = [
+                child.dob ? `Born ${this.formatDate(child.dob)}` : 'Birth date not set',
+                child.sex || '',
+                child.idNumber ? `ID ${child.idNumber}` : '',
+                child.archived ? 'Archived' : ''
+            ].filter(Boolean);
+            const detail = [child.breed, child.color].filter(Boolean).map((part) => this.escape(part)).join(' · ');
+            return `
+                <button type="button" class="record" data-open-animal="${this.escape(child.id)}">
+                    <div class="record-top">
+                        <strong>${this.escape(child.name)}</strong>
+                        <span class="pill">${this.escape(child.type || 'Animal')}</span>
+                    </div>
+                    <p>${this.escape(bits.join(' · '))}</p>
+                    ${detail ? `<p>${detail}</p>` : ''}
+                    ${child.birthWeight ? `<p>Birth weight ${this.escape(child.birthWeight)} lb</p>` : ''}
+                    ${child.birthNotes ? `<p>${this.escape(child.birthNotes)}</p>` : ''}
+                </button>
+            `;
+        }).join('');
+        return { html, total: items.length };
+    }
+
+    parentFacts(animal) {
+        const parents = (animal.parentIds || []).map((id) => this.animal(id)).filter(Boolean);
+        if (!parents.length) return '';
+        const links = parents.map((parent) =>
+            `<button type="button" class="parent-link" data-open-animal="${this.escape(parent.id)}">${this.escape(parent.name)}</button>`
+        ).join('<span class="parent-sep"> · </span>');
+        return `<div class="fact fact-wide"><span>Parents</span><strong>${links}</strong></div>`;
     }
 
     expenseList(animal, limit) {
@@ -982,6 +1079,12 @@ class HoofNotes {
         document.getElementById('animalBreed').value = animal ? animal.breed || '' : '';
         document.getElementById('animalColor').value = animal ? animal.color || '' : '';
         document.getElementById('animalTag').value = animal ? animal.idNumber || '' : '';
+        const showBirth = !!(editing && animal && (
+            animal.birthWeight || animal.birthNotes || (Array.isArray(animal.parentIds) && animal.parentIds.length)
+        ));
+        document.getElementById('birthFields').classList.toggle('hidden', !showBirth);
+        document.getElementById('animalBirthWeight').value = showBirth && animal.birthWeight ? animal.birthWeight : '';
+        document.getElementById('animalBirthNotes').value = showBirth && animal.birthNotes ? animal.birthNotes : '';
         document.getElementById('deleteAnimalBtn').classList.toggle('hidden', !editing);
         this.openModal('animalModal');
         this.setDateWheels(animal && animal.dob ? animal.dob : '');
@@ -1011,8 +1114,15 @@ class HoofNotes {
             idNumber: document.getElementById('animalTag').value.trim(),
             dob: document.getElementById('animalDob').value
         };
+        const editingBirth = !!(this.editing.animal && !document.getElementById('birthFields').classList.contains('hidden'));
+        if (editingBirth) {
+            fields.birthWeight = document.getElementById('animalBirthWeight').value.trim();
+            fields.birthNotes = document.getElementById('animalBirthNotes').value.trim();
+        }
         if (this.editing.animal) {
-            Object.assign(this.animal(this.editing.animal), fields);
+            const current = this.animal(this.editing.animal);
+            Object.assign(current, fields);
+            if (editingBirth) this.syncBirthWeight(current);
         } else {
             const animal = {
                 id: this.uid(),
@@ -1024,6 +1134,7 @@ class HoofNotes {
                 expenses: []
             };
             this.data.animals.push(animal);
+            this.profileBack = [];
             this.animalId = animal.id;
             document.getElementById('profile').classList.remove('hidden');
         }
@@ -1035,6 +1146,10 @@ class HoofNotes {
     deleteAnimal() {
         const animal = this.animal(this.editing.animal);
         if (!animal || !confirm(`Remove ${animal.name} and all of their records?`)) return;
+        this.data.animals.forEach((item) => {
+            if (!Array.isArray(item.parentIds)) return;
+            item.parentIds = item.parentIds.filter((parentId) => parentId !== animal.id);
+        });
         this.data.animals = this.data.animals.filter((item) => item.id !== animal.id);
         this.save();
         this.closeModal('animalModal');
@@ -1054,7 +1169,111 @@ class HoofNotes {
         if (kind === 'weight') this.openWeight(id);
         if (kind === 'treatment') this.openTreatment(id);
         if (kind === 'breeding') this.openBreeding(id);
+        if (kind === 'offspring') this.openOffspring();
         if (kind === 'expense') this.openExpense(id);
+    }
+
+    openOffspring() {
+        const parent = this.animal();
+        if (!parent) return;
+        document.getElementById('offspringName').value = '';
+        document.getElementById('offspringSex').value = '';
+        document.getElementById('offspringType').value = TYPES.includes(parent.type) ? parent.type : TYPES[0];
+        document.getElementById('offspringBreed').value = parent.breed || '';
+        document.getElementById('offspringColor').value = '';
+        document.getElementById('offspringTag').value = '';
+        document.getElementById('offspringWeight').value = '';
+        document.getElementById('offspringNotes').value = '';
+        this.setDate('offspringDob', '');
+        const options = this.data.animals
+            .filter((animal) => animal.id !== parent.id)
+            .sort((a, b) => a.name.localeCompare(b.name));
+        document.getElementById('offspringOtherParent').innerHTML = '<option value="">None</option>' + options.map((animal) =>
+            `<option value="${this.escape(animal.id)}">${this.escape(animal.name)}${animal.archived ? ' (Archived)' : ''} · ${this.escape(animal.type)}</option>`
+        ).join('');
+        this.openModal('offspringModal');
+        document.getElementById('offspringName').focus();
+    }
+
+    saveOffspring() {
+        const parent = this.animal();
+        if (!parent) return;
+        const name = document.getElementById('offspringName').value.trim();
+        const dob = document.getElementById('offspringDob').value;
+        const type = document.getElementById('offspringType').value;
+        if (!name) {
+            alert('Add a name first.');
+            return;
+        }
+        if (!dob) {
+            alert('Add the date of birth.');
+            return;
+        }
+        if (!type) {
+            alert('Choose an animal type.');
+            return;
+        }
+        const otherId = document.getElementById('offspringOtherParent').value;
+        const other = otherId ? this.animal(otherId) : null;
+        if (otherId && (!other || other.id === parent.id)) {
+            alert('Choose a different animal for the other parent.');
+            return;
+        }
+        const birthWeight = document.getElementById('offspringWeight').value.trim();
+        const parentIds = [parent.id];
+        if (other) parentIds.push(other.id);
+        const child = {
+            id: this.uid(),
+            type,
+            name,
+            sex: document.getElementById('offspringSex').value,
+            breed: document.getElementById('offspringBreed').value.trim(),
+            color: document.getElementById('offspringColor').value.trim(),
+            idNumber: document.getElementById('offspringTag').value.trim(),
+            dob,
+            parentIds,
+            birthWeight,
+            birthNotes: document.getElementById('offspringNotes').value.trim(),
+            healthChecks: [],
+            weights: [],
+            treatments: [],
+            breedings: [],
+            expenses: []
+        };
+        if (birthWeight) this.syncBirthWeight(child);
+        this.data.animals.push(child);
+        if (!this.save()) {
+            this.data.animals = this.data.animals.filter((item) => item.id !== child.id);
+            return;
+        }
+        this.closeModal('offspringModal');
+        this.render();
+    }
+
+    syncBirthWeight(animal) {
+        const weight = String(animal.birthWeight || '').trim();
+        if (!Array.isArray(animal.weights)) animal.weights = [];
+        const index = animal.weights.findIndex((item) => item.id === animal.birthWeightId);
+        if (!weight) {
+            if (index >= 0) animal.weights.splice(index, 1);
+            animal.birthWeightId = '';
+            return;
+        }
+        if (index >= 0) {
+            animal.weights[index].weight = weight;
+            if (animal.dob) animal.weights[index].date = animal.dob;
+            return;
+        }
+        const id = this.uid();
+        animal.birthWeightId = id;
+        animal.weights.push({
+            id,
+            date: animal.dob || this.todayString(),
+            weight,
+            unit: 'lb',
+            notes: 'Birth weight',
+            photos: []
+        });
     }
 
     openHealth(id) {
