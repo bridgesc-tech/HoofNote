@@ -1,4 +1,4 @@
-const APP_VERSION = '1.0.22';
+const APP_VERSION = '1.0.23';
 const WHEEL_ITEM = 44;
 const MAX_PHOTOS = 8;
 const STORAGE_KEY = 'hoofNotesData';
@@ -111,6 +111,21 @@ class HoofNotes {
 
     animal(id) {
         return this.data.animals.find((item) => item.id === (id || this.animalId));
+    }
+
+    nameNumber(name) {
+        const value = String(name || '').trim();
+        if (!/^\d+$/.test(value)) return null;
+        return Number(value);
+    }
+
+    compareAnimals(a, b) {
+        const aNumber = this.nameNumber(a.name);
+        const bNumber = this.nameNumber(b.name);
+        if (aNumber !== null && bNumber !== null && aNumber !== bNumber) return aNumber - bNumber;
+        if (aNumber !== null && bNumber === null) return -1;
+        if (aNumber === null && bNumber !== null) return 1;
+        return String(a.name || '').localeCompare(String(b.name || ''), undefined, { sensitivity: 'base' });
     }
 
     treatments() {
@@ -267,7 +282,7 @@ class HoofNotes {
                 const haystack = `${animal.name} ${animal.breed} ${animal.idNumber} ${animal.type}`.toLowerCase();
                 return haystack.includes(this.query.toLowerCase());
             })
-            .sort((a, b) => a.name.localeCompare(b.name));
+            .sort((a, b) => this.compareAnimals(a, b));
         const cards = animals.map((animal) => {
             const next = (animal.treatments || []).filter((item) => item.nextDue).sort((a, b) => a.nextDue.localeCompare(b.nextDue))[0];
             const state = !showingArchived && next ? this.dueState(next.nextDue) : '';
@@ -1187,7 +1202,7 @@ class HoofNotes {
         this.setDate('offspringDob', '');
         const options = this.data.animals
             .filter((animal) => animal.id !== parent.id)
-            .sort((a, b) => a.name.localeCompare(b.name));
+            .sort((a, b) => this.compareAnimals(a, b));
         document.getElementById('offspringOtherParent').innerHTML = '<option value="">None</option>' + options.map((animal) =>
             `<option value="${this.escape(animal.id)}">${this.escape(animal.name)}${animal.archived ? ' (Archived)' : ''} · ${this.escape(animal.type)}</option>`
         ).join('');

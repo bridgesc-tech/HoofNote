@@ -1,4 +1,4 @@
-const APP_VERSION = '1.0.22';
+const APP_VERSION = '1.0.23';
 const CACHE_NAME = `hoofnotes-${APP_VERSION}`;
 const APP_SHELL = [
   './',
